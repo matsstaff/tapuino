@@ -9,6 +9,10 @@ int play_file(FILINFO* pfile_info);
 uint32_t get_timer_tick();
 void save_eeprom_data();
 
+#ifdef MOTOR_SENSE_OPTO
+  uint8_t MOTOR_IS_OFF();
+#endif
+
 extern volatile uint8_t g_invert_signal;
 extern volatile uint16_t g_ticker_rate;
 extern volatile uint16_t g_ticker_hold_rate;

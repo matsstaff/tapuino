@@ -61,9 +61,11 @@ static volatile uint32_t g_total_timer_count;   // number of (AVR) cycles that t
 static volatile uint8_t g_tap_file_complete;    // flag to indicate that all bytes have been read from the TAP
 static volatile uint32_t g_tap_file_pos;        // current read position in the TAP (bytes)
 static uint32_t g_pulse_length = 0;             // length of pulse in uS
-static uint32_t g_pulse_length_save;            // save length for read
 static volatile uint32_t g_overflow;            // write signal overflow timer detection
 static volatile uint32_t g_timer_tick = 0;      // timer tick at 100Hz (10 ms interval)
+#ifdef MOTOR_SENSE_OPTO
+static volatile uint32_t g_motor_timer_tick = 0; // g_timer_tick value of last motor interrupt
+#endif
 
 uint8_t g_machine_type = C64;
 uint8_t g_video_mode = PAL;
@@ -122,6 +124,12 @@ void setup_cycle_timing() {
 uint32_t get_timer_tick() {
   return g_timer_tick;
 }
+
+#ifdef MOTOR_SENSE_OPTO
+  uint8_t MOTOR_IS_OFF() {
+    return (g_timer_tick - g_motor_timer_tick) > MOTOR_SENSE_THRESHOLD;
+  }
+#endif
 
 // on rising edge of signal from C64
 ISR(TIMER1_CAPT_vect) {
@@ -245,6 +253,12 @@ ISR(TIMER2_COMPA_vect) {
   input_callback();
   g_timer_tick++;   // system ticker for timing
 }
+
+#ifdef MOTOR_SENSE_OPTO
+  ISR(INT0_vect) {
+    g_motor_timer_tick = g_timer_tick;
+  }
+#endif
 
 void disk_timer_setup() {
   TCCR2A = 0;
@@ -636,19 +650,32 @@ int tapuino_hardware_setup(void)
   // no pull-up for now, activate pull-up just before write section, write LED off
   TAPE_WRITE_PORT &= ~_BV(TAPE_WRITE_PIN);
   
+#ifndef MOTOR_SENSE_OPTO
   // motor is input from C64, activate pullups
   MOTOR_DDR &= ~_BV(MOTOR_PIN);
   MOTOR_PORT |= _BV(MOTOR_PIN);
+#endif
   
   // Control pins are output
   CONTROL_DDR |= _BV(CONTROL_PIN0) | _BV(CONTROL_PIN1);
   // default both LOW so BUS 0
   CONTROL_SET_BUS0();
+
+#ifdef MOTOR_SENSE_OPTO
+  // INT0 Input
+  MOTOR_SENSE_DDR &= ~_BV(MOTOR_SENSE_PIN);
+  // INT0 Pullup
+  MOTOR_SENSE_PORT |= _BV(MOTOR_SENSE_PIN);
   
+  // EICRA|=_BV(ISC00); // Rising and falling edge
+  EICRA |= _BV(ISC01); // Falling edge
+  EIMSK |= _BV(INT0); // INT0 Enable
+#else
   // recording led (Arduino: D2, Atmel: PD2)
   REC_LED_DDR |= _BV(REC_LED_PIN);
   REC_LED_OFF();
-  
+#endif  
+
   // keys are all inputs, activate pullups
   KEYS_READ_DDR &= ~_BV(KEY_SELECT_PIN);
   KEYS_READ_PORT |= _BV(KEY_SELECT_PIN);

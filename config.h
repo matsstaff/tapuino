@@ -63,11 +63,19 @@
 #define TAPE_WRITE_PINS     PINB
 #define TAPE_WRITE_PIN      0
 
-#define MOTOR_PORT          PORTD
-#define MOTOR_DDR           DDRD
-#define MOTOR_PIN           4
-#define MOTOR_PINS          PIND
-#define MOTOR_IS_OFF()      (MOTOR_PINS & _BV(MOTOR_PIN))
+#ifdef MOTOR_SENSE_OPTO
+  #define MOTOR_SENSE_THRESHOLD	4
+  #define MOTOR_SENSE_PORT    PORTD
+  #define MOTOR_SENSE_DDR     DDRD
+  #define MOTOR_SENSE_PIN     4
+  #define MOTOR_SENSE_PINS    PIND
+#else
+  #define MOTOR_PORT          PORTD
+  #define MOTOR_DDR           DDRD
+  #define MOTOR_PIN           4
+  #define MOTOR_PINS          PIND
+  #define MOTOR_IS_OFF()      (MOTOR_PINS & _BV(MOTOR_PIN))
+#endif
 
 #define CONTROL_PORT        PORTD
 #define CONTROL_DDR         DDRD
@@ -76,11 +84,16 @@
 #define CONTROL_SET_BUS0()  CONTROL_PORT &= ~(_BV(CONTROL_PIN0) | _BV(CONTROL_PIN1))
 #define CONTROL_SET_BUS1()  { CONTROL_PORT &= ~_BV(CONTROL_PIN1); CONTROL_PORT |= _BV(CONTROL_PIN0); }
 
-#define REC_LED_PORT        PORTD
-#define REC_LED_DDR         DDRD
-#define REC_LED_PIN         2
-#define REC_LED_OFF()       REC_LED_PORT |= _BV(REC_LED_PIN)
-#define REC_LED_ON()        REC_LED_PORT &= ~_BV(REC_LED_PIN)
+#ifndef MOTOR_SENSE_OPTO
+  #define REC_LED_PORT        PORTD
+  #define REC_LED_DDR         DDRD
+  #define REC_LED_PIN         2
+  #define REC_LED_OFF()       REC_LED_PORT |= _BV(REC_LED_PIN)
+  #define REC_LED_ON()        REC_LED_PORT &= ~_BV(REC_LED_PIN)
+#else
+  #define REC_LED_OFF()
+  #define REC_LED_ON()
+#endif
 
  // comment this line if you are using HW1.0
 #define KEYS_INPUT_PULLUP
